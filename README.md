@@ -44,7 +44,7 @@ where:
 
 Linear triangular finite elements and Dirichlet boundary conditions are used.
 
-## Current Results
+## Validation
 
 The implementation has been validated using the two-dimensional infinite square well. As the mesh is refined, the calculated ground-state energy approaches the analytical value.
 
@@ -56,6 +56,18 @@ The implementation has been validated using the two-dimensional infinite square 
 |              30 |                9.896676 |        0.274% |
 
 The project also compares the first several energy levels of square, circular, and hexagonal domains having equal areas.
+
+## Results Visualization
+
+The following figures compare the numerical energy spectra obtained for equal-area quantum dots of different geometries.
+
+### Equal-Area Energy Spectra
+
+![Equal-Area Energy Spectra](results/figures/equal_area_energy_spectra.png)
+
+### Ground-State Energy Comparison
+
+![Ground-State Comparison](results/figures/equal_area_ground_state_comparison.png)
 
 ## Repository Structure
 
