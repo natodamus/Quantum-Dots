@@ -1,52 +1,55 @@
 # Finite Element Modeling of Two-Dimensional Quantum Dots
 
-This repository contains Python code developed for my M.S. Physics project at the University of Massachusetts Dartmouth.
+A computational physics project investigating the numerical solution of the two-dimensional time-independent Schrödinger equation using the **Finite Element Method (FEM)**.
 
-The project uses the finite element method to solve the two-dimensional time-independent Schrödinger equation for particles confined within quantum dots of different geometries.
+**Author:** Renato R. Silva
+**Institution:** University of Massachusetts Dartmouth
+**Program:** M.S. Physics
 
-## Project Goals
+---
 
-The primary goals are to:
+## Overview
 
-* construct finite-element meshes for different two-dimensional geometries;
-* assemble the finite-element stiffness and mass matrices;
-* solve the resulting generalized eigenvalue problem;
-* calculate and visualize low-energy eigenstates;
-* test numerical convergence against known analytical results; and
-* compare the energy spectra of equal-area quantum dots.
+This project develops a finite element solver for particles confined within two-dimensional quantum dots of different geometries. The primary objective is to investigate how the geometry of a quantum dot influences its quantum energy spectrum.
 
-The geometries currently included are:
+The implementation assembles the global stiffness and mass matrices, applies Dirichlet boundary conditions, solves the resulting generalized eigenvalue problem, and compares the low-energy eigenstates for multiple geometries having equal areas.
 
-* square;
-* circle; and
-* regular hexagon.
+Current geometries include:
+
+* Square
+* Circle
+* Regular Hexagon
+
+---
 
 ## Mathematical Model
 
-In dimensionless form, the time-independent Schrödinger equation is written as
+The time-independent Schrödinger equation is
 
 $$
--\frac{1}{2}\nabla^2\psi = E\psi.
+-\frac{1}{2}\nabla^2\psi = E\psi
 $$
 
-After finite-element discretization, the equation becomes the generalized matrix eigenvalue problem
+After finite-element discretization, the problem becomes the generalized eigenvalue problem
 
 $$
-A\boldsymbol{\psi} = E B\boldsymbol{\psi},
+A\psi = EB\psi
 $$
 
-where:
+where
 
-* (A) is the global stiffness matrix;
-* (B) is the global mass matrix;
-* (E) contains the energy eigenvalues; and
-* (\mathbf{\psi}) contains the corresponding eigenvectors.
+* **A** is the global stiffness matrix,
+* **B** is the global mass matrix,
+* **E** contains the energy eigenvalues, and
+* **ψ** represents the corresponding eigenfunctions.
 
-Linear triangular finite elements and Dirichlet boundary conditions are used.
+---
 
-## Validation
+# Validation
 
-The implementation has been validated using the two-dimensional infinite square well. As the mesh is refined, the calculated ground-state energy approaches the analytical value.
+Before comparing different geometries, the implementation was validated using the analytical solution of the two-dimensional infinite square well.
+
+As the mesh is refined, the numerical ground-state energy converges toward the analytical value.
 
 | Mesh Resolution | FEM Ground-State Energy | Percent Error |
 | --------------: | ----------------------: | ------------: |
@@ -55,67 +58,90 @@ The implementation has been validated using the two-dimensional infinite square 
 |              20 |                9.930552 |        0.618% |
 |              30 |                9.896676 |        0.274% |
 
-The project also compares the first several energy levels of square, circular, and hexagonal domains having equal areas.
+---
 
-## Results Visualization
+# Results
 
-The following figures compare the numerical energy spectra obtained for equal-area quantum dots of different geometries.
+## Equal-Area Energy Spectra
 
-### Equal-Area Energy Spectra
+The figure below compares the first ten energy levels for equal-area square, circular, and hexagonal quantum dots.
 
-![Equal-Area Energy Spectra](results/figures/equal_area_energy_spectra.png)
+![Energy Spectrum](results/figures/equal_area_energy_spectra.png)
 
-### Ground-State Energy Comparison
+---
+
+## Ground-State Comparison
+
+Comparison of the lowest energy state for each geometry.
 
 ![Ground-State Comparison](results/figures/equal_area_ground_state_comparison.png)
 
-## Repository Structure
+---
+
+# Repository Structure
 
 ```text
-src/
-    FEM.py
-    square_solver.py
-    circle_mesh.py
-    circle_solver.py
-    hexagon_mesh.py
-    hexagon_solver.py
-    compare_geometries.py
-
-results/
-    equal_area_energy_comparison.csv
-    equal_area_energy_spectra.png
-    equal_area_ground_state_comparison.png
-
-archive/
-    Earlier development and testing files
+Quantum-Dots/
+│
+├── src/
+│   ├── FEM.py
+│   ├── square_solver.py
+│   ├── circle_mesh.py
+│   ├── circle_solver.py
+│   ├── hexagon_mesh.py
+│   ├── hexagon_solver.py
+│   └── compare_geometries.py
+│
+├── results/
+│   ├── data/
+│   └── figures/
+│
+├── archive/
+│
+├── README.md
+├── LICENSE
+└── requirements.txt
 ```
 
-## Installation
+---
 
-Clone the repository and install the required Python packages:
+# Installation
+
+Clone the repository:
 
 ```bash
 git clone https://github.com/natodamus/Quantum-Dots.git
 cd Quantum-Dots
+```
+
+Install the required packages:
+
+```bash
 pip install -r requirements.txt
 ```
 
-## Running the Geometry Comparison
-
-From the repository’s main directory, run:
+Run the geometry comparison:
 
 ```bash
 python src/compare_geometries.py
 ```
 
-The comparison data and figures are saved in the `results` directory.
+---
 
-## Project Status
+# Future Work
 
-This is an active graduate physics project. Additional convergence testing, eigenfunction analysis, documentation, and interpretation of the geometry-dependent spectra are still in progress.
+* Adaptive mesh refinement
+* Higher-order finite elements
+* Additional quantum dot geometries
+* Excited-state eigenfunction visualization
+* Convergence analysis for multiple geometries
+* Time-dependent Schrödinger equation
+* Finite potential wells
 
-## Author
+---
 
-Renato R. Silva
-M.S. Physics
-University of Massachusetts Dartmouth
+# Acknowledgments
+
+This repository contains the computational work developed as part of my M.S. Physics research at the University of Massachusetts Dartmouth.
+
+The project focuses on applying finite element methods to quantum confinement problems and serves as the foundation for ongoing numerical investigations into two-dimensional quantum systems.
