@@ -25,15 +25,15 @@ The geometries currently included are:
 
 In dimensionless form, the time-independent Schrödinger equation is written as
 
-[
+$$
 -\frac{1}{2}\nabla^2\psi = E\psi.
-]
+$$
 
 After finite-element discretization, the equation becomes the generalized matrix eigenvalue problem
 
-[
-A\mathbf{\psi} = E B\mathbf{\psi},
-]
+$$
+A\boldsymbol{\psi} = E B\boldsymbol{\psi},
+$$
 
 where:
 
