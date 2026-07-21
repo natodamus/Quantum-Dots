@@ -19,6 +19,15 @@ from FEM import A_mat, B_mat
 from circle_mesh import circle_mesh
 from hexagon_mesh import hexagon_mesh
 
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+FIGURES = ROOT / "results" / "figures"
+DATA = ROOT / "results" / "data"
+
+FIGURES.mkdir(parents=True, exist_ok=True)
+DATA.mkdir(parents=True, exist_ok=True)
 
 # =========================================================
 # Square mesh generator
@@ -287,7 +296,7 @@ for state in range(number_of_states):
 # =========================================================
 
 with open(
-    "equal_area_energy_comparison.csv",
+    DATA / "equal_area_energy_comparison.csv",
     "w",
     newline=""
 ) as csv_file:
@@ -349,7 +358,7 @@ plt.legend()
 plt.tight_layout()
 
 plt.savefig(
-    "equal_area_energy_spectra.png",
+    FIGURES / "equal_area_energy_spectra.png",
     dpi=300,
     bbox_inches="tight"
 )
@@ -381,7 +390,7 @@ plt.title("Equal-Area Ground-State Energy Comparison")
 plt.tight_layout()
 
 plt.savefig(
-    "equal_area_ground_state_comparison.png",
+    FIGURES / "equal_area_ground_state_comparison.png",
     dpi=300,
     bbox_inches="tight"
 )
