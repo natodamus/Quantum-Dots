@@ -5,24 +5,16 @@ Created on Tue Jul 14 12:13:04 2026
 @author: natoo
 """
 
-"""
-Solve the 2D Schrödinger equation for an infinite circular quantum dot.
-"""
-
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.linalg import eigh
+from scipy.special import jn_zeros
 
 from FEM import A_mat, B_mat
 from circle_mesh import circle_mesh
 
 
+# Solve the FEM eigenvalue problem for the infinite circular well
 def solve_circle(spacing, radius, n_boundary=100):
-    """
-    Generate the circular mesh, assemble the FEM matrices,
-    apply the boundary condition, and solve the eigenvalue problem.
-    """
-
     node, elm, boundary = circle_mesh(
         spacing=spacing,
         radius=radius,
@@ -30,197 +22,54 @@ def solve_circle(spacing, radius, n_boundary=100):
         n_boundary=n_boundary
     )
 
+    # Assemble the FEM stiffness and mass matrices
     A = A_mat(node, elm)
     B = B_mat(node, elm)
 
-    all_nodes = np.arange(len(node))
-    interior = np.setdiff1d(
-        all_nodes,
-        boundary
-    )
+    # Apply psi = 0 on the boundary by solving only for interior nodes
+    interior = np.setdiff1d(np.arange(len(node)), boundary)
 
-    A_int = A[
-        np.ix_(interior, interior)
-    ]
+    A_int = A[np.ix_(interior, interior)]
+    B_int = B[np.ix_(interior, interior)]
 
-    B_int = B[
-        np.ix_(interior, interior)
-    ]
+    # Solve (1/2)A psi = E B psi
+    energies, eigenvectors = eigh(0.5 * A_int, B_int)
 
-    E, psi = eigh(
-        0.5 * A_int,
-        B_int
-    )
-
-    return node, elm, boundary, interior, E, psi
+    return node, elm, boundary, interior, energies, eigenvectors
 
 
-# ---------------------------------------------------------
-# Equal-area circle
-# ---------------------------------------------------------
-
-radius = 1 / np.sqrt(np.pi)
-
-circle_area = np.pi * radius**2
-
-print(f"Circle Radius = {radius:.6f}")
-print(f"Circle Area   = {circle_area:.6f}")
+# Analytical energy levels for a 2D infinite circular well
+def exact_circle_energy(m, n, radius):
+    zero = jn_zeros(m, n)[-1]
+    return zero**2 / (2.0 * radius**2)
 
 
-# ---------------------------------------------------------
-# Mesh convergence study
-# ---------------------------------------------------------
+if __name__ == "__main__":
+    # Choose the radius so the circle has the same area as a unit square
+    radius = 1.0 / np.sqrt(np.pi)
+    spacing = 0.05
 
-print("\nCircle Mesh Convergence\n")
-
-print(
-    f"{'Spacing':>10}"
-    f"{'Nodes':>10}"
-    f"{'E1':>14}"
-    f"{'E2':>14}"
-    f"{'E3':>14}"
-)
-
-for spacing in [0.10, 0.08, 0.06, 0.05]:
-
-    node, elm, boundary, interior, E, psi = solve_circle(
+    node, elm, boundary, interior, energies, eigenvectors = solve_circle(
         spacing=spacing,
         radius=radius,
         n_boundary=100
     )
 
-    print(
-        f"{spacing:10.2f}"
-        f"{len(node):10d}"
-        f"{E[0]:14.6f}"
-        f"{E[1]:14.6f}"
-        f"{E[2]:14.6f}"
-    )
+    # Compare the numerical ground state with the analytical Bessel solution
+    exact_ground = exact_circle_energy(0, 1, radius)
+    error = abs(energies[0] - exact_ground) / exact_ground * 100.0
 
+    print("Circular Quantum Dot")
+    print("--------------------")
+    print(f"Radius            : {radius:.6f}")
+    print(f"Area              : {np.pi * radius**2:.6f}")
+    print(f"Mesh spacing      : {spacing}")
+    print(f"Nodes             : {len(node)}")
+    print(f"Elements          : {len(elm)}")
+    print(f"FEM ground energy : {energies[0]:.8f}")
+    print(f"Exact energy      : {exact_ground:.8f}")
+    print(f"Relative error    : {error:.4f}%")
 
-# ---------------------------------------------------------
-# Final mesh
-# ---------------------------------------------------------
-
-spacing_final = 0.05
-
-node, elm, boundary, interior, E, psi = solve_circle(
-    spacing=spacing_final,
-    radius=radius,
-    n_boundary=100
-)
-
-
-print("\nFirst 10 Circular Quantum-Dot Energies")
-
-for state in range(10):
-
-    print(
-        f"State {state + 1:2d}: "
-        f"E = {E[state]:.6f}"
-    )
-
-
-# ---------------------------------------------------------
-# Reconstruct full wavefunctions
-# ---------------------------------------------------------
-
-psi_full = np.zeros(
-    (len(node), psi.shape[1])
-)
-
-psi_full[
-    interior,
-    :
-] = psi
-
-
-# ---------------------------------------------------------
-# Plot first six wavefunctions
-# ---------------------------------------------------------
-
-number_of_states = 6
-
-for state in range(number_of_states):
-
-    largest_index = np.argmax(
-        np.abs(psi_full[:, state])
-    )
-
-    if psi_full[largest_index, state] < 0:
-        psi_full[:, state] *= -1
-
-    plt.figure(
-        figsize=(6, 5)
-    )
-
-    plt.tripcolor(
-        node[:, 0],
-        node[:, 1],
-        elm,
-        psi_full[:, state],
-        shading="gouraud"
-    )
-
-    plt.colorbar(
-        label=r"$\psi(x,y)$"
-    )
-
-    plt.title(
-        f"Circular Quantum Dot: "
-        f"State {state + 1}, "
-        f"E = {E[state]:.4f}"
-    )
-
-    plt.xlabel("x")
-    plt.ylabel("y")
-
-    plt.gca().set_aspect(
-        "equal"
-    )
-
-    plt.tight_layout()
-    plt.show()
-
-
-# ---------------------------------------------------------
-# Plot first six probability densities
-# ---------------------------------------------------------
-
-for state in range(number_of_states):
-
-    probability_density = (
-        np.abs(psi_full[:, state])**2
-    )
-
-    plt.figure(
-        figsize=(6, 5)
-    )
-
-    plt.tripcolor(
-        node[:, 0],
-        node[:, 1],
-        elm,
-        probability_density,
-        shading="gouraud"
-    )
-
-    plt.colorbar(
-        label=r"$|\psi(x,y)|^2$"
-    )
-
-    plt.title(
-        f"Circular Quantum Dot Probability Density: "
-        f"State {state + 1}, "
-        f"E = {E[state]:.4f}"
-    )
-
-    plt.xlabel("x")
-    plt.ylabel("y")
-
-    plt.gca().set_aspect(
-        "equal"
-    )
-
-    plt.tight_layout()
-    plt.show()
+    print("\nFirst 10 FEM energies")
+    for state, energy in enumerate(energies[:10], start=1):
+        print(f"State {state:2d}: E = {energy:.8f}")

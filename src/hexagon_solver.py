@@ -5,164 +5,60 @@ Created on Tue Jul 14 12:52:20 2026
 @author: natoo
 """
 
-"""
-Solve the 2D Schrödinger equation for an infinite
-regular hexagonal quantum dot.
-"""
-
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.linalg import eigh
 
 from FEM import A_mat, B_mat
 from hexagon_mesh import hexagon_mesh
 
 
-# ---------------------------------------------------------
-# 1. Generate hexagonal mesh
-# ---------------------------------------------------------
-
-spacing = 0.08
-radius = 1.0
-
-node, elm, boundary = hexagon_mesh(
-    spacing=spacing,
-    radius=radius,
-    center=(0.0, 0.0)
-)
-
-print("Number of nodes:", len(node))
-print("Number of elements:", len(elm))
-print("Number of boundary nodes:", len(boundary))
-
-
-# ---------------------------------------------------------
-# 2. Assemble FEM matrices
-# ---------------------------------------------------------
-
-A = A_mat(node, elm)
-B = B_mat(node, elm)
-
-
-# ---------------------------------------------------------
-# 3. Apply infinite-well boundary conditions
-# ---------------------------------------------------------
-
-all_nodes = np.arange(len(node))
-interior = np.setdiff1d(
-    all_nodes,
-    boundary
-)
-
-A_int = A[np.ix_(interior, interior)]
-B_int = B[np.ix_(interior, interior)]
-
-
-# ---------------------------------------------------------
-# 4. Solve generalized eigenvalue problem
-#
-#     (1/2) A psi = E B psi
-# ---------------------------------------------------------
-
-E, psi = eigh(
-    0.5 * A_int,
-    B_int
-)
-
-print("\nFirst 10 hexagonal quantum-dot energies:")
-
-for state in range(10):
-    print(
-        f"State {state + 1:2d}: "
-        f"E = {E[state]:.6f}"
+# Solve the FEM eigenvalue problem for the infinite hexagonal well
+def solve_hexagon(spacing, radius):
+    node, elm, boundary = hexagon_mesh(
+        spacing=spacing,
+        radius=radius,
+        center=(0.0, 0.0)
     )
 
+    # Assemble the FEM stiffness and mass matrices
+    A = A_mat(node, elm)
+    B = B_mat(node, elm)
 
-# ---------------------------------------------------------
-# 5. Reconstruct full wavefunctions
-# ---------------------------------------------------------
+    # Apply psi = 0 on the boundary by solving only for interior nodes
+    interior = np.setdiff1d(np.arange(len(node)), boundary)
 
-psi_full = np.zeros(
-    (len(node), psi.shape[1])
-)
+    A_int = A[np.ix_(interior, interior)]
+    B_int = B[np.ix_(interior, interior)]
 
-psi_full[interior, :] = psi
+    # Solve (1/2)A psi = E B psi
+    energies, eigenvectors = eigh(0.5 * A_int, B_int)
+
+    return node, elm, boundary, interior, energies, eigenvectors
 
 
-# ---------------------------------------------------------
-# 6. Plot first six wavefunctions
-# ---------------------------------------------------------
+if __name__ == "__main__":
+    # Choose the radius so the regular hexagon has area 1
+    radius = np.sqrt(2.0 / (3.0 * np.sqrt(3.0)))
+    spacing = 0.05
 
-number_of_states = 6
-
-for state in range(number_of_states):
-
-    largest_index = np.argmax(
-        np.abs(psi_full[:, state])
+    node, elm, boundary, interior, energies, eigenvectors = solve_hexagon(
+        spacing=spacing,
+        radius=radius
     )
 
-    if psi_full[largest_index, state] < 0:
-        psi_full[:, state] *= -1
+    # Check the numerical area implied by the equal-area radius
+    area = (3.0 * np.sqrt(3.0) / 2.0) * radius**2
 
-    plt.figure(figsize=(6, 5))
+    print("Hexagonal Quantum Dot")
+    print("---------------------")
+    print(f"Radius       : {radius:.6f}")
+    print(f"Area         : {area:.6f}")
+    print(f"Mesh spacing : {spacing}")
+    print(f"Nodes        : {len(node)}")
+    print(f"Elements     : {len(elm)}")
 
-    plt.tripcolor(
-        node[:, 0],
-        node[:, 1],
-        elm,
-        psi_full[:, state],
-        shading="gouraud"
-    )
+    print("\nFirst 10 FEM energies")
+    for state, energy in enumerate(energies[:10], start=1):
+        print(f"State {state:2d}: E = {energy:.8f}")
+    
 
-    plt.colorbar(
-        label=r"$\psi(x,y)$"
-    )
-
-    plt.title(
-        f"Hexagonal Quantum Dot: "
-        f"State {state + 1}, "
-        f"E = {E[state]:.4f}"
-    )
-
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.gca().set_aspect("equal")
-    plt.tight_layout()
-    plt.show()
-
-
-# ---------------------------------------------------------
-# 7. Plot first six probability densities
-# ---------------------------------------------------------
-
-for state in range(number_of_states):
-
-    probability_density = (
-        np.abs(psi_full[:, state])**2
-    )
-
-    plt.figure(figsize=(6, 5))
-
-    plt.tripcolor(
-        node[:, 0],
-        node[:, 1],
-        elm,
-        probability_density,
-        shading="gouraud"
-    )
-
-    plt.colorbar(
-        label=r"$|\psi(x,y)|^2$"
-    )
-
-    plt.title(
-        f"Hexagonal Quantum Dot Probability Density: "
-        f"State {state + 1}, "
-        f"E = {E[state]:.4f}"
-    )
-
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.gca().set_aspect("equal")
-    plt.tight_layout()
-    plt.show()
