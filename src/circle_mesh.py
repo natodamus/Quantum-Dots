@@ -5,26 +5,22 @@ Created on Tue Jul 14 12:08:01 2026
 @author: natoo
 """
 
-
-
 import numpy as np
 import matplotlib.pyplot as plt
+
 from scipy.spatial import Delaunay
 
 
+# Generate a triangular FEM mesh for a circular quantum dot
 def circle_mesh(
     spacing=0.08,
     radius=1.0,
     center=(0.0, 0.0),
     n_boundary=100
 ):
-    
-
     xc, yc = center
 
-    # -------------------------------------------------
-    # 1. Generate interior Cartesian grid points
-    # -------------------------------------------------
+    # Generate Cartesian candidate points
     x_values = np.arange(
         xc - radius + spacing,
         xc + radius,
@@ -37,24 +33,32 @@ def circle_mesh(
         spacing
     )
 
-    interior_points = []
+    X, Y = np.meshgrid(
+        x_values,
+        y_values
+    )
 
-    for y in y_values:
-        for x in x_values:
+    candidate_points = np.column_stack([
+        X.ravel(),
+        Y.ravel()
+    ])
 
-            distance_squared = (x - xc)**2 + (y - yc)**2
+    # Keep interior points away from the explicit boundary nodes
+    distance_squared = (
+        (candidate_points[:, 0] - xc)**2
+        + (candidate_points[:, 1] - yc)**2
+    )
 
-            # Keep points strictly inside the circle.
-            # Leave a small gap so they do not duplicate
-            # the separately generated boundary nodes.
-            if distance_squared < (radius - 0.25 * spacing)**2:
-                interior_points.append([x, y])
+    interior_mask = (
+        distance_squared
+        < (radius - 0.25 * spacing)**2
+    )
 
-    interior_points = np.array(interior_points)
+    interior_points = candidate_points[
+        interior_mask
+    ]
 
-    # -------------------------------------------------
-    # 2. Generate circular boundary points
-    # -------------------------------------------------
+    # Generate equally spaced nodes along the circular boundary
     theta = np.linspace(
         0.0,
         2.0 * np.pi,
@@ -62,64 +66,64 @@ def circle_mesh(
         endpoint=False
     )
 
-    boundary_points = np.column_stack((
+    boundary_points = np.column_stack([
         xc + radius * np.cos(theta),
         yc + radius * np.sin(theta)
-    ))
+    ])
 
-    # Combine interior and boundary nodes
-    node = np.vstack((interior_points, boundary_points))
+    node = np.vstack([
+        interior_points,
+        boundary_points
+    ])
 
-    # Boundary nodes were added last
-    first_boundary_node = len(interior_points)
-
+    # Boundary nodes are added after the interior nodes
     boundary = np.arange(
-        first_boundary_node,
+        len(interior_points),
         len(node)
     )
 
-    # -------------------------------------------------
-    # 3. Construct triangular elements
-    # -------------------------------------------------
+    # Triangulate all nodes
     triangulation = Delaunay(node)
     elm = triangulation.simplices.copy()
 
-    # -------------------------------------------------
-    # 4. Ensure all triangles are counterclockwise
-    # -------------------------------------------------
-    for k, triangle in enumerate(elm):
+    # Ensure counterclockwise element orientation
+    p1 = node[elm[:, 0]]
+    p2 = node[elm[:, 1]]
+    p3 = node[elm[:, 2]]
 
-        p1 = node[triangle[0]]
-        p2 = node[triangle[1]]
-        p3 = node[triangle[2]]
+    signed_area = (
+        (p2[:, 0] - p1[:, 0])
+        * (p3[:, 1] - p1[:, 1])
+        - (p3[:, 0] - p1[:, 0])
+        * (p2[:, 1] - p1[:, 1])
+    )
 
-        signed_area = 0.5 * (
-            (p2[0] - p1[0]) * (p3[1] - p1[1])
-            - (p3[0] - p1[0]) * (p2[1] - p1[1])
-        )
+    clockwise = signed_area < 0.0
 
-        if signed_area < 0:
-            elm[k, [1, 2]] = elm[k, [2, 1]]
+    elm[clockwise, 1], elm[clockwise, 2] = (
+        elm[clockwise, 2].copy(),
+        elm[clockwise, 1].copy()
+    )
 
     return node, elm, boundary
 
 
-# =====================================================
-# Mesh visualization test
-# =====================================================
 if __name__ == "__main__":
-
     node, elm, boundary = circle_mesh(
         spacing=0.08,
         radius=1.0,
         n_boundary=100
     )
 
-    print("Number of nodes:", len(node))
-    print("Number of elements:", len(elm))
-    print("Number of boundary nodes:", len(boundary))
+    print("Circle Mesh")
+    print("=" * 40)
+    print(f"Nodes          : {len(node)}")
+    print(f"Elements       : {len(elm)}")
+    print(f"Boundary nodes : {len(boundary)}")
 
-    plt.figure(figsize=(7, 7))
+    plt.figure(
+        figsize=(7, 7)
+    )
 
     plt.triplot(
         node[:, 0],
@@ -137,8 +141,14 @@ if __name__ == "__main__":
 
     plt.xlabel("x")
     plt.ylabel("y")
-    plt.title("Circular Quantum Dot FEM Mesh")
-    plt.gca().set_aspect("equal")
+    plt.title(
+        "Circular Quantum Dot FEM Mesh"
+    )
+
+    plt.gca().set_aspect(
+        "equal"
+    )
+
     plt.legend()
     plt.tight_layout()
     plt.show()
