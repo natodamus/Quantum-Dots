@@ -33,81 +33,43 @@ The stadium geometry is also used to explore spectral signatures associated with
 
 In dimensionless units with
 
-$$
-\hbar = m = 1,
-$$
+$$\hbar = m = 1$$
 
 the time-independent Schrödinger equation inside the quantum dot is
 
-$$
--\frac{1}{2}\nabla^2\psi = E\psi.
-$$
+$$-\frac{1}{2}\nabla^2\psi = E\psi$$
 
 For an infinite potential boundary,
 
-$$
-\psi = 0
-$$
+$$\psi = 0$$
 
 on the boundary of the domain.
 
 Multiplying the Schrödinger equation by a test function $v$ and integrating over the domain gives
 
-$$
--\frac{1}{2}
-\int_{\Omega}
-v\nabla^2\psi\,d\Omega
-=
-E
-\int_{\Omega}
-v\psi\,d\Omega.
-$$
+$$-\frac{1}{2}\int_{\Omega} v\nabla^2\psi\,d\Omega = E\int_{\Omega} v\psi\,d\Omega$$
 
 Integration by parts gives the weak form
 
-$$
-\frac{1}{2}
-\int_{\Omega}
-\nabla v\cdot\nabla\psi\,d\Omega
-=
-E
-\int_{\Omega}
-v\psi\,d\Omega,
-$$
+$$\frac{1}{2}\int_{\Omega} \nabla v\cdot\nabla\psi\,d\Omega = E\int_{\Omega} v\psi\,d\Omega$$
 
 where the boundary contribution vanishes because of the Dirichlet boundary condition.
 
 Using linear triangular finite elements,
 
-$$
-\psi \approx \sum_j c_j N_j,
-$$
+$$\psi \approx \sum_j c_j N_j$$
 
 which leads to the generalized eigenvalue problem
 
-$$
-\frac{1}{2}A\mathbf{c}
-=
-E B\mathbf{c},
-$$
+$$\frac{1}{2}A\mathbf{c} = EB\mathbf{c}$$
 
 with
 
-$$
-A_{ij}
-=
-\int_{\Omega}
-\nabla N_i\cdot\nabla N_j\,d\Omega
-$$
+$$A_{ij} = \int_{\Omega} \nabla N_i\cdot\nabla N_j\,d\Omega$$
 
 and
 
-$$
-B_{ij}
-=
-\int_{\Omega}
-N_iN_j\,d\Omega.
-$$
+$$B_{ij} = \int_{\Omega} N_iN_j\,d\Omega$$
 
 Here, $A$ is the global stiffness matrix and $B$ is the global mass matrix.
 
@@ -117,42 +79,29 @@ Here, $A$ is the global stiffness matrix and $B$ is the global mass matrix.
 
 Each geometry is scaled to have area
 
-$$
-A=1.
-$$
+$$A = 1$$
 
 For the square,
 
-$$
-L=1.
-$$
+$$L = 1$$
 
 For the circle,
 
-$$
-R=\frac{1}{\sqrt{\pi}}.
-$$
+$$R = \frac{1}{\sqrt{\pi}}$$
 
 For a regular hexagon,
 
-$$
-R=
-\sqrt{\frac{2}{3\sqrt{3}}},
-$$
+$$R = \sqrt{\frac{2}{3\sqrt{3}}}$$
 
 where $R$ is the distance from the center to a vertex.
 
 The stadium consists of a central rectangle and two semicircular endcaps. Taking the rectangle half-length $a$ equal to the semicircle radius $R$ gives
 
-$$
-4aR+\pi R^2=1,
-$$
+$$4aR + \pi R^2 = 1$$
 
 and therefore
 
-$$
-a=R=\frac{1}{\sqrt{4+\pi}}.
-$$
+$$a = R = \frac{1}{\sqrt{4+\pi}}$$
 
 This normalization allows differences in the calculated spectra to be attributed primarily to geometry rather than domain area.
 
@@ -164,34 +113,21 @@ This normalization allows differences in the calculated spectra to be attributed
 
 For a square of side length $L=1$, the analytical energy levels are
 
-$$
-E_{n_x,n_y}
-=
-\frac{\pi^2}{2}
-\left(
-n_x^2+n_y^2
-\right).
-$$
+$$E_{n_x,n_y} = \frac{\pi^2}{2}\left(n_x^2+n_y^2\right)$$
 
 The analytical ground-state energy is
 
-$$
-E_1=\pi^2\approx9.869604.
-$$
+$$E_1 = \pi^2 \approx 9.869604$$
 
 The FEM solution converges toward this value as the mesh is refined.
 
 At the final resolution used for the geometry comparison,
 
-$$
-E_1^{\mathrm{FEM}}=9.879347,
-$$
+$$E_1^{\mathrm{FEM}} = 9.879347$$
 
 corresponding to an error of approximately
 
-$$
-0.099\%.
-$$
+$$0.099\%$$
 
 ### Circular Infinite Well
 
@@ -199,21 +135,15 @@ The circular well provides a second analytical validation using the zeros of Bes
 
 For the equal-area circle, the analytical ground-state energy is
 
-$$
-E_1^{\mathrm{exact}}=9.084207.
-$$
+$$E_1^{\mathrm{exact}} = 9.084207$$
 
 The final FEM calculation gives
 
-$$
-E_1^{\mathrm{FEM}}=9.097966,
-$$
+$$E_1^{\mathrm{FEM}} = 9.097966$$
 
 with an error of approximately
 
-$$
-0.151\%.
-$$
+$$0.151\%$$
 
 These comparisons provide independent validation of the FEM implementation for both polygonal and curved boundaries.
 
@@ -255,7 +185,7 @@ The convergence study confirms that the low-energy FEM solutions become increasi
 
 The first 20 energy eigenvalues were calculated for each equal-area geometry.
 
-The ground-state energies are
+The ground-state energies are:
 
 | Geometry | Ground-State Energy |
 | --- | ---: |
@@ -294,19 +224,13 @@ An independent basis-expansion calculation was implemented as an additional nume
 
 The wavefunction is expanded in a rectangular sine basis,
 
-$$
-\phi_{mn}(x,y)
-=
-\frac{2}{\sqrt{L_xL_y}}
-\sin\left(
-\frac{m\pi(x-x_{\min})}{L_x}
-\right)
-\sin\left(
-\frac{n\pi(y-y_{\min})}{L_y}
-\right).
-$$
+$$\phi_{mn}(x,y) = \frac{2}{\sqrt{L_xL_y}}\sin\left(\frac{m\pi(x-x_{\min})}{L_x}\right)\sin\left(\frac{n\pi(y-y_{\min})}{L_y}\right)$$
 
 The desired geometry is represented inside the rectangular basis domain using a finite potential barrier $V_0$ outside the quantum dot.
+
+The kinetic-energy contribution for each rectangular basis state is
+
+$$T_{mn} = \frac{1}{2}\left[\left(\frac{m\pi}{L_x}\right)^2+\left(\frac{n\pi}{L_y}\right)^2\right]$$
 
 The resulting Hamiltonian is diagonalized and compared with the FEM spectrum for the hexagonal and stadium geometries.
 
@@ -324,61 +248,39 @@ Unlike the classically integrable square and circular billiards, the classical B
 
 ### Adjacent-Gap Ratio
 
-For consecutive energy spacings
+For consecutive energy spacings,
 
-$$
-s_n=E_{n+1}-E_n,
-$$
+$$s_n = E_{n+1}-E_n$$
 
 the adjacent-gap ratio is defined as
 
-$$
-r_n
-=
-\frac{
-\min(s_n,s_{n+1})
-}{
-\max(s_n,s_{n+1})
-}.
-$$
+$$r_n = \frac{\min(s_n,s_{n+1})}{\max(s_n,s_{n+1})}$$
 
 This statistic is useful because it does not require spectral unfolding.
 
 For an integrable system with Poisson level statistics,
 
-$$
-\langle r\rangle_{\mathrm{Poisson}}
-\approx0.3863.
-$$
+$$\langle r\rangle_{\mathrm{Poisson}} \approx 0.3863$$
 
 For a time-reversal-symmetric chaotic system described by Gaussian Orthogonal Ensemble statistics,
 
-$$
-\langle r\rangle_{\mathrm{GOE}}
-\approx0.5359.
-$$
+$$\langle r\rangle_{\mathrm{GOE}} \approx 0.5359$$
 
 ### Reflection Symmetry Sectors
 
 The stadium has reflection symmetry about both the $x$ and $y$ axes. Mixing states from different symmetry classes can obscure level repulsion, so the spectrum is separated into four parity sectors:
 
-$$
-(+,+),\quad (+,-),\quad (-,+),\quad (-,-).
-$$
+$$(+,+),\quad (+,-),\quad (-,+),\quad (-,-)$$
 
 A quarter-stadium FEM model is used to impose these symmetries directly.
 
 Even parity corresponds to a Neumann condition on the appropriate symmetry axis,
 
-$$
-\frac{\partial\psi}{\partial n}=0,
-$$
+$$\frac{\partial\psi}{\partial n} = 0$$
 
 while odd parity corresponds to a Dirichlet condition,
 
-$$
-\psi=0.
-$$
+$$\psi = 0$$
 
 The physical stadium boundary remains Dirichlet in every sector.
 
@@ -390,23 +292,19 @@ Using the first 50 states from each symmetry sector, the adjacent-gap ratios wer
 
 At the finest mesh investigated,
 
-$$
-h=0.020,
-$$
+$$h = 0.020$$
 
 the combined mean adjacent-gap ratio was
 
-$$
-\langle r\rangle=0.5350.
-$$
+$$\langle r\rangle = 0.5350$$
 
 This is close to the GOE reference value
 
-$$
-\langle r\rangle_{\mathrm{GOE}}=0.5359
-$$
+$$\langle r\rangle_{\mathrm{GOE}} = 0.5359$$
 
-and well separated from the Poisson reference value.
+and well separated from the Poisson reference value
+
+$$\langle r\rangle_{\mathrm{Poisson}} = 0.3863$$
 
 ![Stadium Quantum Chaos Convergence](results/figures/stadium_chaos_convergence.png)
 
@@ -512,7 +410,7 @@ The finite element method provides an accurate and flexible approach for solving
 
 The square and circular calculations reproduce known analytical solutions with small numerical error, while mesh-refinement studies demonstrate convergence of the FEM solutions.
 
-For equal-area domains, the geometry significantly affects both the ground-state energy and the excited-state spectrum. The circular domain produces the lowest ground-state energy, while changes in symmetry produce distinct degeneracy patterns and eigenfunction structures.
+For equal-area domains, geometry significantly affects both the ground-state energy and the excited-state spectrum. The circular domain produces the lowest ground-state energy, while changes in symmetry produce distinct degeneracy patterns and eigenfunction structures.
 
 The independent basis-expansion calculations provide an additional numerical comparison for geometries without simple analytical solutions.
 
