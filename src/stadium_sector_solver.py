@@ -4,13 +4,11 @@ Created on Tue Sep 22 15:36:33 2026
 
 @author: natoo
 """
-
 import numpy as np
 
-from scipy.linalg import eigh
 from scipy.spatial import Delaunay
-
-from FEM import A_mat, B_mat
+from scipy.sparse import coo_matrix
+from scipy.sparse.linalg import eigsh
 
 
 # Remove nodes that do not belong to any retained triangle
@@ -26,35 +24,76 @@ def remove_unused_nodes(node, elm):
     return node, elm
 
 
+# Test whether points lie inside the quarter stadium
+def inside_quarter_stadium(x, y, a, R, tolerance=1e-12):
+    inside_rectangle = (
+        (x >= -tolerance)
+        & (x <= a + tolerance)
+        & (y >= -tolerance)
+        & (y <= R + tolerance)
+    )
+
+    inside_cap = (
+        (x >= a - tolerance)
+        & ((x - a)**2 + y**2 <= R**2 + tolerance)
+    )
+
+    return inside_rectangle | inside_cap
+
+
 # Generate a triangular mesh for the upper-right quarter of the stadium
-def quarter_stadium_mesh(h, a, R, n_arc=60):
-    # Sample points on a regular grid
-    x = np.arange(0.0, a + R + 0.5 * h, h)
-    y = np.arange(0.0, R + 0.5 * h, h)
+def quarter_stadium_mesh(h, a, R, n_arc=80):
+    # Regular grid without overshooting the physical domain
+    x = np.arange(0.0, a + R, h)
+    y = np.arange(0.0, R, h)
 
     X, Y = np.meshgrid(x, y, indexing="xy")
 
     xf = X.ravel()
     yf = Y.ravel()
 
-    # Quarter stadium = rectangle plus upper-right quarter-circle cap
-    inside_rectangle = (
-        (xf >= 0.0)
-        & (xf <= a)
-        & (yf >= 0.0)
-        & (yf <= R)
+    inside = inside_quarter_stadium(
+        xf,
+        yf,
+        a,
+        R
     )
 
-    inside_cap = (
+    xf = xf[inside]
+    yf = yf[inside]
+
+    # Keep interior grid points away from the physical wall
+    wall_clearance = 0.5 * h
+
+    distance_top = R - yf
+
+    distance_curve = (
+        R
+        - np.sqrt(
+            (xf - a)**2 + yf**2
+        )
+    )
+
+    near_top_wall = (
+        (xf <= a)
+        & (yf > 0.0)
+        & (distance_top < wall_clearance)
+    )
+
+    near_curved_wall = (
         (xf >= a)
-        & ((xf - a)**2 + yf**2 <= R**2)
+        & (yf > 0.0)
+        & (distance_curve < wall_clearance)
     )
 
-    inside = inside_rectangle | inside_cap
+    keep = ~(
+        near_top_wall
+        | near_curved_wall
+    )
 
     grid_points = np.column_stack([
-        xf[inside],
-        yf[inside]
+        xf[keep],
+        yf[keep]
     ])
 
     # Add points along the curved physical boundary
@@ -69,10 +108,10 @@ def quarter_stadium_mesh(h, a, R, n_arc=60):
         R * np.sin(theta)
     ])
 
-    # Add points along y = 0
+    # Add points along y = 0 without overshooting
     x_axis_values = np.arange(
         0.0,
-        a + R + 0.5 * h,
+        a + R,
         h
     )
 
@@ -87,10 +126,10 @@ def quarter_stadium_mesh(h, a, R, n_arc=60):
         [a + R, 0.0]
     ])
 
-    # Add points along x = 0
+    # Add points along x = 0 without overshooting
     y_axis_values = np.arange(
         0.0,
-        R + 0.5 * h,
+        R,
         h
     )
 
@@ -108,7 +147,7 @@ def quarter_stadium_mesh(h, a, R, n_arc=60):
     # Add points along the horizontal physical wall
     top_values = np.arange(
         0.0,
-        a + 0.5 * h,
+        a,
         h
     )
 
@@ -146,24 +185,14 @@ def quarter_stadium_mesh(h, a, R, n_arc=60):
         axis=1
     )
 
-    xc = centroids[:, 0]
-    yc = centroids[:, 1]
-
-    inside_rectangle = (
-        (xc >= 0.0)
-        & (xc <= a)
-        & (yc >= 0.0)
-        & (yc <= R)
+    inside_centroids = inside_quarter_stadium(
+        centroids[:, 0],
+        centroids[:, 1],
+        a,
+        R
     )
 
-    inside_cap = (
-        (xc >= a)
-        & ((xc - a)**2 + yc**2 <= R**2)
-    )
-
-    elm = elm[
-        inside_rectangle | inside_cap
-    ]
+    elm = elm[inside_centroids]
 
     # Remove orphan nodes created when exterior triangles were discarded
     node, elm = remove_unused_nodes(
@@ -250,13 +279,226 @@ def sector_conditions(sector):
     return conditions[sector]
 
 
+# Calculate triangle areas
+def triangle_areas(node, elm):
+    p1 = node[elm[:, 0]]
+    p2 = node[elm[:, 1]]
+    p3 = node[elm[:, 2]]
+
+    cross = (
+        (p2[:, 0] - p1[:, 0])
+        * (p3[:, 1] - p1[:, 1])
+        - (p2[:, 1] - p1[:, 1])
+        * (p3[:, 0] - p1[:, 0])
+    )
+
+    return 0.5 * np.abs(cross)
+
+
+# Check mesh geometry and boundary classification
+def validate_quarter_stadium_mesh(node, elm, a, R):
+    inside = inside_quarter_stadium(
+        node[:, 0],
+        node[:, 1],
+        a,
+        R,
+        tolerance=1e-9
+    )
+
+    if not np.all(inside):
+        raise ValueError(
+            "Mesh contains nodes outside the quarter stadium."
+        )
+
+    areas = triangle_areas(
+        node,
+        elm
+    )
+
+    if np.any(areas <= 0.0):
+        raise ValueError(
+            "Mesh contains zero-area triangles."
+        )
+
+    mesh_area = np.sum(areas)
+
+    # Exact area of the quarter stadium
+    exact_area = (
+        a * R
+        + 0.25 * np.pi * R**2
+    )
+
+    # Find edges that belong to only one triangle
+    edges = np.vstack([
+        elm[:, [0, 1]],
+        elm[:, [1, 2]],
+        elm[:, [2, 0]]
+    ])
+
+    edges = np.sort(
+        edges,
+        axis=1
+    )
+
+    unique_edges, counts = np.unique(
+        edges,
+        axis=0,
+        return_counts=True
+    )
+
+    boundary_edges = unique_edges[
+        counts == 1
+    ]
+
+    boundary_nodes = np.unique(
+        boundary_edges
+    )
+
+    (
+        x_symmetry,
+        y_symmetry,
+        physical_wall
+    ) = quarter_stadium_boundaries(
+        node,
+        a,
+        R
+    )
+
+    known_boundary = np.unique(
+        np.concatenate([
+            x_symmetry,
+            y_symmetry,
+            physical_wall
+        ])
+    )
+
+    unknown_boundary = np.setdiff1d(
+        boundary_nodes,
+        known_boundary
+    )
+
+    if len(unknown_boundary) > 0:
+        raise ValueError(
+            f"Mesh contains {len(unknown_boundary)} "
+            "unclassified boundary nodes."
+        )
+
+    return {
+        "minimum_triangle_area": np.min(areas),
+        "mesh_area": mesh_area,
+        "exact_area": exact_area,
+        "relative_area_error": (
+            abs(mesh_area - exact_area)
+            / exact_area
+        )
+    }
+
+
+# Assemble sparse FEM stiffness and mass matrices
+def assemble_sparse_fem(node, elm):
+    rows = []
+    cols = []
+    stiffness_data = []
+    mass_data = []
+
+    for triangle in elm:
+        coords = node[triangle]
+
+        x1, y1 = coords[0]
+        x2, y2 = coords[1]
+        x3, y3 = coords[2]
+
+        signed_double_area = (
+            (x2 - x1) * (y3 - y1)
+            - (x3 - x1) * (y2 - y1)
+        )
+
+        area = 0.5 * abs(
+            signed_double_area
+        )
+
+        if area <= 0.0:
+            raise ValueError(
+                "Zero-area triangle encountered."
+            )
+
+        b = np.array([
+            y2 - y3,
+            y3 - y1,
+            y1 - y2
+        ])
+
+        c = np.array([
+            x3 - x2,
+            x1 - x3,
+            x2 - x1
+        ])
+
+        # Local stiffness matrix
+        local_A = (
+            np.outer(b, b)
+            + np.outer(c, c)
+        ) / (4.0 * area)
+
+        # Local consistent mass matrix
+        local_B = (
+            area / 12.0
+        ) * np.array([
+            [2.0, 1.0, 1.0],
+            [1.0, 2.0, 1.0],
+            [1.0, 1.0, 2.0]
+        ])
+
+        for i in range(3):
+            for j in range(3):
+                rows.append(
+                    triangle[i]
+                )
+
+                cols.append(
+                    triangle[j]
+                )
+
+                stiffness_data.append(
+                    local_A[i, j]
+                )
+
+                mass_data.append(
+                    local_B[i, j]
+                )
+
+    shape = (
+        len(node),
+        len(node)
+    )
+
+    A = coo_matrix(
+        (
+            stiffness_data,
+            (rows, cols)
+        ),
+        shape=shape
+    ).tocsr()
+
+    B = coo_matrix(
+        (
+            mass_data,
+            (rows, cols)
+        ),
+        shape=shape
+    ).tocsr()
+
+    return A, B
+
+
 # Solve one reflection-symmetry sector of the stadium
 def solve_stadium_sector(
     sector,
     h=0.03,
     a=None,
     R=None,
-    n_arc=60
+    n_arc=80,
+    num_eigenvalues=50
 ):
     if a is None:
         a = 1.0 / np.sqrt(4.0 + np.pi)
@@ -269,6 +511,14 @@ def solve_stadium_sector(
         a=a,
         R=R,
         n_arc=n_arc
+    )
+
+    # Check the mesh before solving
+    mesh_info = validate_quarter_stadium_mesh(
+        node,
+        elm,
+        a,
+        R
     )
 
     (
@@ -312,33 +562,22 @@ def solve_stadium_sector(
         dirichlet
     )
 
-    # Assemble FEM stiffness and mass matrices
-    A = A_mat(
-        node,
-        elm
-    )
-
-    B = B_mat(
+    # Assemble sparse FEM stiffness and mass matrices
+    A, B = assemble_sparse_fem(
         node,
         elm
     )
 
     A_free = A[
-        np.ix_(
-            free_nodes,
-            free_nodes
-        )
-    ]
+        free_nodes
+    ][:, free_nodes]
 
     B_free = B[
-        np.ix_(
-            free_nodes,
-            free_nodes
-        )
-    ]
+        free_nodes
+    ][:, free_nodes]
 
-    # Check that every free degree of freedom carries nonzero mass
-    mass_diagonal = np.diag(B_free)
+    # Check that every free degree of freedom carries positive mass
+    mass_diagonal = B_free.diagonal()
 
     if np.any(mass_diagonal <= 0.0):
         bad_nodes = np.where(
@@ -350,11 +589,39 @@ def solve_stadium_sector(
             "zero or negative diagonal entries."
         )
 
-    # Solve (1/2)A psi = E B psi
-    energies, eigenvectors = eigh(
-        0.5 * A_free,
-        B_free
+    # Sparse solver requires fewer eigenvalues than free DOF
+    k = min(
+        num_eigenvalues,
+        len(free_nodes) - 2
     )
+
+    if k < 1:
+        raise ValueError(
+            "Not enough free degrees of freedom."
+        )
+
+    # Solve (1/2)A psi = E B psi near the bottom of the spectrum
+    energies, eigenvectors = eigsh(
+        0.5 * A_free,
+        k=k,
+        M=B_free,
+        sigma=0.0,
+        which="LM"
+    )
+
+    # Sort eigenvalues and eigenvectors in ascending energy
+    order = np.argsort(
+        energies
+    )
+
+    energies = energies[
+        order
+    ]
+
+    eigenvectors = eigenvectors[
+        :,
+        order
+    ]
 
     return (
         node,
@@ -362,12 +629,13 @@ def solve_stadium_sector(
         dirichlet,
         free_nodes,
         energies,
-        eigenvectors
+        eigenvectors,
+        mesh_info
     )
 
 
 if __name__ == "__main__":
-    h = 0.03
+    h = 0.02
     a = 1.0 / np.sqrt(4.0 + np.pi)
     R = a
 
@@ -395,13 +663,15 @@ if __name__ == "__main__":
             dirichlet,
             free_nodes,
             energies,
-            eigenvectors
+            eigenvectors,
+            mesh_info
         ) = solve_stadium_sector(
             sector=sector,
             h=h,
             a=a,
             R=R,
-            n_arc=60
+            n_arc=80,
+            num_eigenvalues=50
         )
 
         print(
@@ -412,3 +682,27 @@ if __name__ == "__main__":
             f"{energies[0]:14.6f}"
             f"{energies[1]:14.6f}"
         )
+
+    print()
+    print("Mesh diagnostics")
+    print("-" * 72)
+
+    print(
+        "Minimum triangle area:",
+        f"{mesh_info['minimum_triangle_area']:.8e}"
+    )
+
+    print(
+        "Mesh area:",
+        f"{mesh_info['mesh_area']:.10f}"
+    )
+
+    print(
+        "Exact quarter area:",
+        f"{mesh_info['exact_area']:.10f}"
+    )
+
+    print(
+        "Relative area error:",
+        f"{mesh_info['relative_area_error']:.6e}"
+    )

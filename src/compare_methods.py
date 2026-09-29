@@ -17,9 +17,20 @@ from stadium_basis import solve_stadium_basis
 
 
 # Print the difference between FEM and a reference spectrum
-def compare(name, fem, reference, reference_name, n=10):
-    print(f"\n{name}: FEM vs {reference_name}")
-    print("-" * 58)
+def compare(
+    name,
+    fem,
+    reference,
+    reference_name,
+    n=10
+):
+    print(
+        f"\n{name}: FEM vs {reference_name}"
+    )
+
+    print(
+        "-" * 58
+    )
 
     print(
         f"{'State':>8}"
@@ -28,8 +39,23 @@ def compare(name, fem, reference, reference_name, n=10):
         f"{'Diff (%)':>12}"
     )
 
-    for i in range(min(n, len(fem), len(reference))):
-        difference = abs(fem[i] - reference[i]) / abs(fem[i]) * 100.0
+    for i in range(
+        min(
+            n,
+            len(fem),
+            len(reference)
+        )
+    ):
+        difference = (
+            abs(
+                fem[i]
+                - reference[i]
+            )
+            / abs(
+                reference[i]
+            )
+            * 100.0
+        )
 
         print(
             f"{i + 1:8d}"
@@ -40,64 +66,144 @@ def compare(name, fem, reference, reference_name, n=10):
 
 
 # Generate the analytical spectrum of a unit square
-def exact_square_spectrum(number_of_states=10):
+def exact_square_spectrum(
+    number_of_states=10
+):
     levels = []
 
-    for nx in range(1, 15):
-        for ny in range(1, 15):
-            energy = 0.5 * np.pi**2 * (nx**2 + ny**2)
-            levels.append(energy)
+    for nx in range(
+        1,
+        15
+    ):
+        for ny in range(
+            1,
+            15
+        ):
+            energy = (
+                0.5
+                * np.pi**2
+                * (
+                    nx**2
+                    + ny**2
+                )
+            )
 
-    return np.sort(np.asarray(levels))[:number_of_states]
+            levels.append(
+                energy
+            )
+
+    return np.sort(
+        np.asarray(
+            levels
+        )
+    )[
+        :number_of_states
+    ]
 
 
 # Generate the analytical spectrum of an equal-area circle
-def exact_circle_spectrum(radius, number_of_states=10):
+def exact_circle_spectrum(
+    radius,
+    number_of_states=10
+):
     levels = []
 
-    for m in range(21):
-        zeros = jn_zeros(m, 20)
+    for m in range(
+        21
+    ):
+        zeros = jn_zeros(
+            m,
+            20
+        )
 
         for zero in zeros:
-            energy = zero**2 / (2.0 * radius**2)
-            levels.append(energy)
+            energy = (
+                zero**2
+                / (
+                    2.0
+                    * radius**2
+                )
+            )
+
+            levels.append(
+                energy
+            )
 
             # Angular states with m > 0 are twofold degenerate
             if m > 0:
-                levels.append(energy)
+                levels.append(
+                    energy
+                )
 
-    return np.sort(np.asarray(levels))[:number_of_states]
+    return np.sort(
+        np.asarray(
+            levels
+        )
+    )[
+        :number_of_states
+    ]
 
 
-if __name__ == "__main__":
+def main():
     number_of_states = 10
 
+    # Equal-area geometry parameters
+    circle_radius = (
+        1.0
+        / np.sqrt(
+            np.pi
+        )
+    )
+
+    hexagon_radius = np.sqrt(
+        2.0
+        / (
+            3.0
+            * np.sqrt(
+                3.0
+            )
+        )
+    )
+
+    stadium_a = (
+        1.0
+        / np.sqrt(
+            4.0
+            + np.pi
+        )
+    )
+
     # Use the final FEM resolutions selected from the convergence study
-    square_fem = solve_square(N=50)[4]
+    square_fem = solve_square(
+        N=50,
+        num_eigenvalues=number_of_states
+    )[4]
 
-    circle_radius = 1.0 / np.sqrt(np.pi)
     circle_fem = solve_circle(
-        spacing=0.03,
+        spacing=0.02,
         radius=circle_radius,
-        n_boundary=100
+        n_boundary=None,
+        num_eigenvalues=number_of_states
     )[4]
 
-    hexagon_radius = np.sqrt(2.0 / (3.0 * np.sqrt(3.0)))
     hexagon_fem = solve_hexagon(
-        spacing=0.03,
-        radius=hexagon_radius
+        spacing=0.02,
+        radius=hexagon_radius,
+        num_eigenvalues=number_of_states
     )[4]
 
-    stadium_a = 1.0 / np.sqrt(4.0 + np.pi)
     stadium_fem = solve_stadium(
-        h=0.03,
+        h=0.02,
         a=stadium_a,
         R=stadium_a,
-        n_arc=60
+        n_arc=80,
+        num_eigenvalues=number_of_states
     )[4]
 
     # Use exact spectra for the analytically solvable geometries
-    square_exact = exact_square_spectrum(number_of_states)
+    square_exact = exact_square_spectrum(
+        number_of_states
+    )
 
     circle_exact = exact_circle_spectrum(
         circle_radius,
@@ -119,9 +225,18 @@ if __name__ == "__main__":
         num_states=number_of_states
     )[0]
 
-    print("\n" + "=" * 62)
-    print("QUANTUM DOT METHOD COMPARISON")
-    print("=" * 62)
+    print(
+        "\n"
+        + "=" * 62
+    )
+
+    print(
+        "QUANTUM DOT METHOD COMPARISON"
+    )
+
+    print(
+        "=" * 62
+    )
 
     compare(
         "Square",
@@ -155,16 +270,25 @@ if __name__ == "__main__":
         number_of_states
     )
 
-    print("\nBasis-method note:")
+    print(
+        "\nBasis-method note:"
+    )
+
     print(
         "Hexagon and stadium use a finite V0 = 1e4 barrier with an "
         "18 x 18 rectangular sine basis."
     )
+
     print(
         "The basis results provide an independent numerical comparison "
         "but use a finite barrier and truncated basis."
     )
+
     print(
         "They should not be interpreted as exact infinite-wall "
         "reference energies."
     )
+
+
+if __name__ == "__main__":
+    main()

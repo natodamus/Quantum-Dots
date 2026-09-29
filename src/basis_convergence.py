@@ -137,7 +137,11 @@ def print_barrier_table(name, data):
 
 # Plot ground-state energy versus basis size
 def plot_basis_convergence(hexagon, stadium, hex_fem, stadium_fem):
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+    fig, axes = plt.subplots(
+        1,
+        2,
+        figsize=(11, 4.5)
+    )
 
     axes[0].plot(
         hexagon[:, 1],
@@ -194,7 +198,11 @@ def plot_basis_convergence(hexagon, stadium, hex_fem, stadium_fem):
 
 # Plot ground-state energy versus barrier height
 def plot_barrier_study(hexagon, stadium, hex_fem, stadium_fem):
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+    fig, axes = plt.subplots(
+        1,
+        2,
+        figsize=(11, 4.5)
+    )
 
     axes[0].semilogx(
         hexagon[:, 0],
@@ -249,25 +257,53 @@ def plot_barrier_study(hexagon, stadium, hex_fem, stadium_fem):
     plt.close(fig)
 
 
-if __name__ == "__main__":
-    basis_sizes = [10, 12, 15, 18, 20, 22, 25]
-    barrier_values = [1e3, 1e4, 1e5, 1e6]
+def main():
+    basis_sizes = [
+        10,
+        12,
+        15,
+        18,
+        20,
+        22,
+        25
+    ]
 
-    # Calculate final FEM reference values
-    hexagon_radius = np.sqrt(2.0 / (3.0 * np.sqrt(3.0)))
+    barrier_values = [
+        1e3,
+        1e4,
+        1e5,
+        1e6
+    ]
 
+    # Equal-area geometry parameters
+    hexagon_radius = np.sqrt(
+        2.0
+        / (
+            3.0
+            * np.sqrt(3.0)
+        )
+    )
+
+    stadium_a = (
+        1.0
+        / np.sqrt(
+            4.0 + np.pi
+        )
+    )
+
+    # Calculate FEM reference values using the final meshes
     hexagon_fem = solve_hexagon(
-        spacing=0.03,
-        radius=hexagon_radius
+        spacing=0.02,
+        radius=hexagon_radius,
+        num_eigenvalues=1
     )[4][0]
 
-    stadium_a = 1.0 / np.sqrt(4.0 + np.pi)
-
     stadium_fem = solve_stadium(
-        h=0.03,
+        h=0.02,
         a=stadium_a,
         R=stadium_a,
-        n_arc=60
+        n_arc=80,
+        num_eigenvalues=1
     )[4][0]
 
     print("FEM Reference Energies")
@@ -365,8 +401,16 @@ if __name__ == "__main__":
         stadium_fem
     )
 
-    print("\nSaved basis-method results to:")
+    print(
+        "\nSaved basis-method results to:"
+    )
     print(DATA_DIR)
 
-    print("\nSaved basis-method figures to:")
+    print(
+        "\nSaved basis-method figures to:"
+    )
     print(FIGURES_DIR)
+
+
+if __name__ == "__main__":
+    main()

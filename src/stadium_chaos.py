@@ -24,40 +24,122 @@ FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
 # Theoretical mean adjacent-gap ratios
 R_POISSON = 2.0 * np.log(2.0) - 1.0
-R_GOE = 0.53590
+R_GOE = 0.5307
+R_GOE_SURMISE = 0.53590
 
 
 # Calculate nearest-neighbor spacings
 def spacings(energies):
-    return np.diff(energies)
+    return np.diff(
+        np.asarray(
+            energies,
+            dtype=float
+        )
+    )
 
 
 # Calculate adjacent-gap ratios without spectral unfolding
 def gap_ratios(energies):
-    s = spacings(energies)
+    s = spacings(
+        energies
+    )
 
-    return np.minimum(
-        s[:-1],
-        s[1:]
-    ) / np.maximum(
-        s[:-1],
-        s[1:]
+    s1 = s[:-1]
+    s2 = s[1:]
+
+    denominator = np.maximum(
+        s1,
+        s2
+    )
+
+    # Protect against zero or invalid spacings
+    valid = (
+        np.isfinite(s1)
+        & np.isfinite(s2)
+        & (s1 >= 0.0)
+        & (s2 >= 0.0)
+        & (denominator > 0.0)
+    )
+
+    return (
+        np.minimum(
+            s1[valid],
+            s2[valid]
+        )
+        / denominator[valid]
     )
 
 
 # Calculate the mean adjacent-gap ratio
 def mean_gap_ratio(energies):
-    ratios = gap_ratios(energies)
+    ratios = gap_ratios(
+        energies
+    )
 
     if len(ratios) == 0:
         return np.nan
 
-    return np.mean(ratios)
+    return np.mean(
+        ratios
+    )
+
+
+# Bootstrap uncertainty for a collection of gap ratios
+def bootstrap_mean_ratio(
+    ratios,
+    number_of_samples=10000,
+    seed=12345
+):
+    ratios = np.asarray(
+        ratios,
+        dtype=float
+    )
+
+    if len(ratios) == 0:
+        return np.nan, np.nan, np.nan
+
+    rng = np.random.default_rng(
+        seed
+    )
+
+    bootstrap_means = np.empty(
+        number_of_samples
+    )
+
+    for i in range(number_of_samples):
+        sample = rng.choice(
+            ratios,
+            size=len(ratios),
+            replace=True
+        )
+
+        bootstrap_means[i] = np.mean(
+            sample
+        )
+
+    standard_error = np.std(
+        bootstrap_means,
+        ddof=1
+    )
+
+    lower, upper = np.percentile(
+        bootstrap_means,
+        [2.5, 97.5]
+    )
+
+    return (
+        standard_error,
+        lower,
+        upper
+    )
 
 
 # Save one symmetry-sector spectrum
 def save_sector_spectrum(sector, energies):
-    states = np.arange(1, len(energies) + 1)
+    states = np.arange(
+        1,
+        len(energies) + 1
+    )
 
     data = np.column_stack([
         states,
@@ -77,15 +159,18 @@ def save_sector_spectrum(sector, energies):
 # Print statistics over several spectral windows
 def print_window_statistics(sector, energies):
     windows = [
+        (0, 20),
+        (0, 30),
+        (0, 40),
         (0, 50),
-        (0, 75),
-        (0, 100),
-        (0, 150),
-        (25, 100),
-        (50, 150)
+        (10, 30),
+        (20, 50)
     ]
 
-    print(f"\nSector {sector}")
+    print(
+        f"\nSector {sector}"
+    )
+
     print("-" * 48)
 
     print(
@@ -149,7 +234,13 @@ def plot_mean_ratios(sector_spectra):
     ax.axhline(
         R_GOE,
         linestyle=":",
-        label=f"GOE ({R_GOE:.3f})"
+        label=f"Asymptotic GOE ({R_GOE:.3f})"
+    )
+
+    ax.axhline(
+        R_GOE_SURMISE,
+        linestyle="-.",
+        label=f"GOE surmise ({R_GOE_SURMISE:.3f})"
     )
 
     ax.set_xlabel(
@@ -162,7 +253,7 @@ def plot_mean_ratios(sector_spectra):
 
     ax.set_ylim(
         0.30,
-        0.62
+        0.64
     )
 
     ax.set_title(
@@ -170,6 +261,7 @@ def plot_mean_ratios(sector_spectra):
     )
 
     ax.legend()
+
     ax.grid(
         axis="y",
         alpha=0.3
@@ -189,7 +281,9 @@ def plot_mean_ratios(sector_spectra):
 # Plot the distribution of adjacent-gap ratios
 def plot_ratio_distribution(sector_spectra):
     all_ratios = np.concatenate([
-        gap_ratios(energies)
+        gap_ratios(
+            energies
+        )
         for energies in sector_spectra.values()
     ])
 
@@ -200,10 +294,13 @@ def plot_ratio_distribution(sector_spectra):
     )
 
     # Poisson ratio distribution
-    poisson = 2.0 / (1.0 + r)**2
+    poisson = (
+        2.0
+        / (1.0 + r)**2
+    )
 
-    # GOE ratio distribution
-    goe = (
+    # Wigner-like GOE ratio surmise
+    goe_surmise = (
         (27.0 / 4.0)
         * (r + r**2)
         / (1.0 + r + r**2)**2.5
@@ -231,9 +328,9 @@ def plot_ratio_distribution(sector_spectra):
 
     ax.plot(
         r,
-        goe,
+        goe_surmise,
         linestyle="-",
-        label="GOE"
+        label="GOE ratio surmise"
     )
 
     ax.set_xlabel(
@@ -254,6 +351,7 @@ def plot_ratio_distribution(sector_spectra):
     )
 
     ax.legend()
+
     ax.grid(
         alpha=0.3
     )
@@ -269,11 +367,11 @@ def plot_ratio_distribution(sector_spectra):
     plt.close(fig)
 
 
-# Plot convergence of the mean gap ratio with spectral window size
+# Plot stability of the mean gap ratio with level count
 def plot_ratio_convergence(sector_spectra):
     counts = np.arange(
-        25,
-        151,
+        10,
+        51,
         5
     )
 
@@ -313,7 +411,13 @@ def plot_ratio_convergence(sector_spectra):
     ax.axhline(
         R_GOE,
         linestyle=":",
-        label="GOE"
+        label="Asymptotic GOE"
+    )
+
+    ax.axhline(
+        R_GOE_SURMISE,
+        linestyle="-.",
+        label="GOE surmise"
     )
 
     ax.set_xlabel(
@@ -329,6 +433,7 @@ def plot_ratio_convergence(sector_spectra):
     )
 
     ax.legend()
+
     ax.grid(
         alpha=0.3
     )
@@ -345,7 +450,9 @@ def plot_ratio_convergence(sector_spectra):
 
 
 if __name__ == "__main__":
-    number_of_states = 150
+    # Use only the low-energy portion of a fine mesh
+    number_of_states = 50
+    mesh_size = 0.01
 
     a = 1.0 / np.sqrt(
         4.0 + np.pi
@@ -361,14 +468,26 @@ if __name__ == "__main__":
     sector_spectra = {}
 
     print("Stadium Quantum-Chaos Analysis")
-    print("=" * 54)
+    print("=" * 60)
 
     print(
-        f"Poisson <r> : {R_POISSON:.6f}"
+        f"Mesh h             : {mesh_size:.3f}"
     )
 
     print(
-        f"GOE <r>     : {R_GOE:.6f}"
+        f"States per sector   : {number_of_states}"
+    )
+
+    print(
+        f"Poisson <r>         : {R_POISSON:.6f}"
+    )
+
+    print(
+        f"Asymptotic GOE      : {R_GOE:.6f}"
+    )
+
+    print(
+        f"GOE surmise         : {R_GOE_SURMISE:.6f}"
     )
 
     # Solve each reflection-symmetry sector independently
@@ -383,18 +502,16 @@ if __name__ == "__main__":
             dirichlet,
             free_nodes,
             energies,
-            eigenvectors
+            eigenvectors,
+            mesh_info
         ) = solve_stadium_sector(
             sector=sector,
-            h=0.03,
+            h=mesh_size,
             a=a,
             R=a,
-            n_arc=60
+            n_arc=80,
+            num_eigenvalues=number_of_states
         )
-
-        energies = energies[
-            :number_of_states
-        ]
 
         sector_spectra[
             sector
@@ -406,6 +523,10 @@ if __name__ == "__main__":
         )
 
         print(
+            f"DOF             : {len(free_nodes)}"
+        )
+
+        print(
             f"States retained : {len(energies)}"
         )
 
@@ -414,7 +535,7 @@ if __name__ == "__main__":
         )
 
         print(
-            f"E{len(energies)}            : "
+            f"E{len(energies)}             : "
             f"{energies[-1]:.6f}"
         )
 
@@ -423,9 +544,18 @@ if __name__ == "__main__":
             f"{mean_gap_ratio(energies):.6f}"
         )
 
-    print("\n" + "=" * 54)
-    print("SPECTRAL-WINDOW CHECK")
-    print("=" * 54)
+    print(
+        "\n"
+        + "=" * 60
+    )
+
+    print(
+        "SPECTRAL-WINDOW CHECK"
+    )
+
+    print(
+        "=" * 60
+    )
 
     for sector in sectors:
         print_window_statistics(
@@ -433,7 +563,7 @@ if __name__ == "__main__":
             sector_spectra[sector]
         )
 
-    # Combine all within-sector ratios only after computing them separately
+    # Combine ratios only after calculating them within each sector
     combined_ratios = np.concatenate([
         gap_ratios(
             sector_spectra[sector]
@@ -441,19 +571,57 @@ if __name__ == "__main__":
         for sector in sectors
     ])
 
-    print("\nCombined within-sector statistics")
-    print("-" * 42)
-    print(
-        f"Gap ratios : {len(combined_ratios)}"
+    combined_mean = np.mean(
+        combined_ratios
     )
-    print(
-        f"Mean <r>   : {np.mean(combined_ratios):.6f}"
+
+    # Estimate statistical uncertainty by bootstrap resampling
+    (
+        bootstrap_se,
+        confidence_lower,
+        confidence_upper
+    ) = bootstrap_mean_ratio(
+        combined_ratios,
+        number_of_samples=10000,
+        seed=12345
     )
+
     print(
-        f"Poisson    : {R_POISSON:.6f}"
+        "\nCombined within-sector statistics"
     )
+
     print(
-        f"GOE        : {R_GOE:.6f}"
+        "-" * 48
+    )
+
+    print(
+        f"Gap ratios       : {len(combined_ratios)}"
+    )
+
+    print(
+        f"Mean <r>         : {combined_mean:.6f}"
+    )
+
+    print(
+        f"Bootstrap SE     : {bootstrap_se:.6f}"
+    )
+
+    print(
+        f"95% bootstrap CI : "
+        f"[{confidence_lower:.6f}, "
+        f"{confidence_upper:.6f}]"
+    )
+
+    print(
+        f"Poisson          : {R_POISSON:.6f}"
+    )
+
+    print(
+        f"Asymptotic GOE   : {R_GOE:.6f}"
+    )
+
+    print(
+        f"GOE surmise      : {R_GOE_SURMISE:.6f}"
     )
 
     plot_mean_ratios(
@@ -468,8 +636,18 @@ if __name__ == "__main__":
         sector_spectra
     )
 
-    print("\nSaved spectra to:")
-    print(DATA_DIR)
+    print(
+        "\nSaved spectra to:"
+    )
 
-    print("\nSaved figures to:")
-    print(FIGURES_DIR)
+    print(
+        DATA_DIR
+    )
+
+    print(
+        "\nSaved figures to:"
+    )
+
+    print(
+        FIGURES_DIR
+    )
