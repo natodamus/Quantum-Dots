@@ -68,9 +68,7 @@ R_{\mathrm{circle}}=\frac{1}{\sqrt{\pi}},
 $$
 
 $$
-R_{\mathrm{hexagon}}
-=
-\sqrt{\frac{2}{3\sqrt{3}}},
+R_{\mathrm{hexagon}} = \sqrt{\frac{2}{3\sqrt{3}}}
 $$
 
 and for the stadium,
