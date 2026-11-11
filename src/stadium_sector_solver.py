@@ -5,6 +5,8 @@ Created on Tue Sep 22 15:36:33 2026
 @author: natoo
 """
 import numpy as np
+import csv
+from pathlib import Path
 
 from scipy.spatial import Delaunay
 from scipy.sparse import coo_matrix
@@ -494,7 +496,7 @@ def assemble_sparse_fem(node, elm):
 # Solve one reflection-symmetry sector of the stadium
 def solve_stadium_sector(
     sector,
-    h=0.03,
+    h=0.02,
     a=None,
     R=None,
     n_arc=80,
@@ -651,6 +653,9 @@ if __name__ == "__main__":
         f"{'E2':>14}"
     )
 
+    # Collect eigenvalues from all four sectors for comparison
+    all_sector_energies = []
+
     for sector in [
         "++",
         "+-",
@@ -673,6 +678,10 @@ if __name__ == "__main__":
             n_arc=80,
             num_eigenvalues=50
         )
+
+        # Store every computed eigenvalue, not only the first two printed below
+        for index, energy in enumerate(energies, start=1):
+            all_sector_energies.append((sector, index, float(energy)))
 
         print(
             f"{sector:>8}"
@@ -706,3 +715,36 @@ if __name__ == "__main__":
         "Relative area error:",
         f"{mesh_info['relative_area_error']:.6e}"
     )
+
+    # Merge and sort all four symmetry-sector spectra
+    all_sector_energies.sort(key=lambda row: row[2])
+
+    # Save the combined spectrum for comparison with the full stadium
+    output_dir = Path(__file__).resolve().parents[1] / "results"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / "stadium_sector_energies.csv"
+
+    with output_file.open("w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(["global_state", "sector", "sector_state", "energy"])
+
+        for global_state, (sector, sector_state, energy) in enumerate(
+            all_sector_energies, start=1
+        ):
+            writer.writerow([
+                global_state, sector, sector_state, f"{energy:.10f}"
+            ])
+
+    print(f"\nSaved merged spectrum to {output_file}")
+    print("\nFirst 20 merged stadium eigenvalues")
+    print("-" * 55)
+
+    for global_state, (sector, sector_state, energy) in enumerate(
+        all_sector_energies[:20], start=1
+    ):
+        print(
+            f"{global_state:3d}  "
+            f"{sector:>2}  "
+            f"{sector_state:3d}  "
+            f"{energy:14.8f}"
+        )
