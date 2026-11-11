@@ -24,12 +24,7 @@ All four domains are scaled to have equal area so that differences in their spec
 
 The FEM implementation is validated against analytical solutions for the square and circular infinite wells. Additional numerical studies include mesh convergence, an independent basis-expansion comparison, eigenfunction visualization, and symmetry-resolved spectral statistics for the stadium billiard.
 
-The stadium is also investigated using two independent numerical formulations:
-
-1. A full-domain FEM calculation without symmetry reduction or mirroring.
-2. Four quarter-domain calculations using reflection-symmetry boundary conditions.
-
-The resulting spectra are compared to validate the numerical implementation.
+The stadium is additionally investigated using both direct full-domain FEM calculations and four symmetry-reduced quarter-domain calculations.
 
 ---
 
@@ -55,7 +50,7 @@ $$
 
 where $A$ and $B$ are the FEM stiffness and mass matrices.
 
-The matrix elements are defined by
+The matrix elements are
 
 $$
 A_{ij}=\int_\Omega \nabla\phi_i\cdot\nabla\phi_j\,d\Omega
@@ -67,9 +62,9 @@ $$
 B_{ij}=\int_\Omega \phi_i\phi_j\,d\Omega,
 $$
 
-where $\phi_i$ are the piecewise-linear finite-element basis functions.
+where $\phi_i$ denotes a piecewise-linear finite-element basis function.
 
-The generalized eigenvalue problem is solved numerically to obtain the energy eigenvalues and their corresponding eigenfunctions.
+The resulting generalized eigenvalue problem is solved numerically to obtain the energy eigenvalues and corresponding eigenfunctions.
 
 ---
 
@@ -101,13 +96,13 @@ $$
 a=R=\frac{1}{\sqrt{4+\pi}}.
 $$
 
-The stadium consists of a rectangle with two semicircular end caps. Its total area is
+The stadium consists of a rectangular region with two semicircular end caps.
+
+Its total area is
 
 $$
 A_{\mathrm{stadium}}=4aR+\pi R^2.
 $$
-
-Setting $a=R$ gives the equal-area stadium geometry.
 
 The final FEM resolutions used for the primary geometry comparison are:
 
@@ -122,27 +117,54 @@ The final FEM resolutions used for the primary geometry comparison are:
 
 ## Finite Element Meshes
 
-Each geometry is discretized into triangular finite elements.
+Each geometry is discretized using triangular finite elements.
 
-The meshes are constructed to approximate the physical boundaries while providing sufficient spatial resolution for the eigenvalue calculations.
+The mesh-generation routines produce the node coordinates and triangular connectivity required for assembling the FEM matrices.
 
-The mesh-generation scripts produce the node coordinates and triangle connectivity used to assemble the FEM matrices.
+Two mesh resolutions are used for visualization and documentation.
 
-The script `mesh_gallery.py` generates individual mesh figures for all four geometries and a combined comparison figure.
+### Mesh Resolutions
 
-The stadium mesh represents the complete physical domain without dividing it into quarters.
+| Geometry | Illustrative mesh | Primary numerical mesh |
+| --- | --- | --- |
+| Square | $N=12$, $h\approx0.0833$ | $N=50$, $h=0.02$ |
+| Circle | $h=0.08$ | $h=0.02$ |
+| Hexagon | $h=0.08$ | $h=0.02$ |
+| Full stadium | $h=0.08$, `n_arc=80` | $h=0.02$, `n_arc=80` |
+| Quarter stadium | Separate sector mesh | $h=0.02$, `n_arc=80` |
 
-![Square Mesh](results/figures/mesh_square.png)
+The coarser meshes are used to make the triangular elements clearly visible.
 
-![Circle Mesh](results/figures/mesh_circle.png)
+The finer meshes correspond to the primary numerical resolution used for the energy-spectrum calculations.
 
-![Hexagon Mesh](results/figures/mesh_hexagon.png)
+The square uses an integer number of subdivisions, so its coarse grid spacing is approximately $1/12$, rather than exactly $0.08$.
 
-![Full Stadium Mesh](results/figures/mesh_stadium_full.png)
+The stadium also requires an arc-discretization parameter, `n_arc`, which is fixed at 80 for the standardized calculations.
 
-![Combined Mesh Gallery](results/figures/mesh_gallery.png)
+### Coarse Mesh Gallery
 
-Mesh refinement is used to investigate numerical convergence and the sensitivity of the calculated energy eigenvalues to spatial discretization.
+The following meshes use approximately $h=0.08$.
+
+![Coarse FEM Mesh Gallery](results/figures/mesh_gallery_h080.png)
+
+### Fine Mesh Gallery
+
+The following meshes use $h=0.02$.
+
+![Fine FEM Mesh Gallery](results/figures/mesh_gallery_h020.png)
+
+Individual mesh figures are generated for each full-domain geometry:
+
+- `mesh_square_h080.png` and `mesh_square_h020.png`
+- `mesh_circle_h080.png` and `mesh_circle_h020.png`
+- `mesh_hexagon_h080.png` and `mesh_hexagon_h020.png`
+- `mesh_stadium_full_h080.png` and `mesh_stadium_full_h020.png`
+
+The quarter-stadium mesh is generated separately by the symmetry-sector solver.
+
+To regenerate both mesh galleries:
+
+    python src/mesh_gallery.py
 
 ---
 
@@ -165,7 +187,7 @@ Mesh-refinement studies show convergence toward the analytical results and incre
 
 ## Equal-Area Spectrum
 
-The ground-state energies obtained in the primary geometry comparison are:
+The final ground-state energies are:
 
 | Geometry | $E_1$ |
 | --- | ---: |
@@ -202,20 +224,22 @@ The Bunimovich stadium is solved directly on its complete two-dimensional domain
 
 Unlike the symmetry-reduced approach, this calculation does not divide the geometry into quarters or reconstruct the eigenfunctions through reflection.
 
-The full-stadium solver applies Dirichlet boundary conditions only along the physical outer boundary.
+The full-stadium solver applies Dirichlet boundary conditions along the physical outer boundary.
 
 The coordinate axes remain interior lines of the domain.
 
-The resulting eigenfunctions can therefore exhibit the stadium's natural reflection symmetries without imposing them explicitly.
+The resulting eigenfunctions can therefore exhibit the stadium's reflection symmetries without explicitly imposing them.
 
 ### Full-Stadium Mesh Convergence
+
+The standardized full-stadium calculation uses `n_arc=80`.
 
 Two mesh resolutions were investigated:
 
 | Mesh spacing | Nodes | Triangles | Ground-state energy |
 | --- | ---: | ---: | ---: |
-| $h=0.04$ | 818 | 1,398 | 11.41944971 |
-| $h=0.02$ | 2,666 | 5,056 | 11.39634214 |
+| $h=0.04$ | 778 | 1,358 | 11.41959504 |
+| $h=0.02$ | 2,626 | 5,016 | 11.39664556 |
 
 The relative change in the ground-state energy is calculated as
 
@@ -225,29 +249,17 @@ $$
 \times100\%.
 $$
 
-This gives
+This gives approximately
 
 $$
-\delta E_1\approx0.203\%.
+\delta E_1\approx0.201\%.
 $$
 
-The ground-state energy changes relatively little under refinement, while higher-energy states exhibit larger changes because their eigenfunctions have more rapid spatial oscillations.
+The ground-state energy changes relatively little under refinement.
 
-The twentieth eigenvalue changes from
+Higher-energy states generally require finer meshes because their eigenfunctions contain more rapid spatial oscillations.
 
-$$
-E_{20}(0.04)=163.07832400
-$$
-
-to
-
-$$
-E_{20}(0.02)=157.99957549.
-$$
-
-This corresponds to a relative change of approximately 3.214%.
-
-These results demonstrate numerical refinement behavior, although further refinement would be necessary to estimate the remaining error relative to the continuum eigenvalues.
+These results demonstrate mesh-refinement behavior, although further refinement would be necessary to estimate the remaining error relative to the exact continuum eigenvalues.
 
 ---
 
@@ -323,7 +335,7 @@ This indicates that the triangulated quarter-domain closely approximates the int
 
 To validate the symmetry-reduced calculation, the first 20 full-stadium eigenvalues were compared against the merged spectra of the four quarter-stadium symmetry sectors.
 
-Both calculations used nominal mesh spacing $h=0.02$.
+Both calculations used nominal mesh spacing $h=0.02$ and `n_arc=80`.
 
 The relative difference for each eigenvalue is defined as
 
@@ -335,42 +347,42 @@ $$
 
 ### Eigenvalue Comparison
 
-| State | Sector | Full Stadium | Quarter Stadium |
-| --- | --- | ---: | ---: |
-| 1 | ++ | 11.39634214 | 11.39607338 |
-| 2 | -+ | 19.02699668 | 19.02538129 |
-| 3 | ++ | 31.41552975 | 31.41434951 |
-| 4 | +- | 38.40488305 | 38.40434066 |
-| 5 | -- | 47.49326366 | 47.49059516 |
-| 6 | -+ | 48.21078773 | 48.20886404 |
-| 7 | +- | 62.09415661 | 62.08595868 |
-| 8 | ++ | 69.07369701 | 69.06992281 |
-| 9 | -- | 81.50787091 | 81.49904063 |
-| 10 | ++ | 83.27317632 | 83.27271842 |
-| 11 | -+ | 91.41653974 | 91.40127373 |
-| 12 | -+ | 96.41101923 | 96.41107863 |
-| 13 | +- | 105.04641887 | 105.03288194 |
-| 14 | ++ | 109.51252827 | 109.49569774 |
-| 15 | ++ | 124.39235296 | 124.38095834 |
-| 16 | -- | 132.08414197 | 132.05235297 |
-| 17 | -+ | 132.15984899 | 132.15285441 |
-| 18 | +- | 145.97973509 | 145.98021443 |
-| 19 | -+ | 157.53401711 | 157.51317313 |
-| 20 | -- | 157.99957549 | 157.99862342 |
+| State | Sector | Full Stadium | Quarter Stadium | Difference |
+| --- | --- | ---: | ---: | ---: |
+| 1 | ++ | 11.39664556 | 11.39607338 | 0.00502% |
+| 2 | -+ | 19.02773632 | 19.02538129 | 0.01238% |
+| 3 | ++ | 31.41691714 | 31.41434951 | 0.00817% |
+| 4 | +- | 38.40592184 | 38.40434066 | 0.00412% |
+| 5 | -- | 47.49456283 | 47.49059516 | 0.00835% |
+| 6 | -+ | 48.21466144 | 48.20886404 | 0.01203% |
+| 7 | +- | 62.09499675 | 62.08595868 | 0.01456% |
+| 8 | ++ | 69.07763755 | 69.06992281 | 0.01117% |
+| 9 | -- | 81.51679563 | 81.49904063 | 0.02179% |
+| 10 | ++ | 83.27017795 | 83.27271842 | 0.00305% |
+| 11 | -+ | 91.41422517 | 91.40127373 | 0.01417% |
+| 12 | -+ | 96.41994034 | 96.41107863 | 0.00919% |
+| 13 | +- | 105.05195629 | 105.03288194 | 0.01816% |
+| 14 | ++ | 109.52193441 | 109.49569774 | 0.02396% |
+| 15 | ++ | 124.40138676 | 124.38095834 | 0.01642% |
+| 16 | -- | 132.07827178 | 132.05235297 | 0.01963% |
+| 17 | -+ | 132.17082692 | 132.15285441 | 0.01360% |
+| 18 | +- | 145.97838940 | 145.98021443 | 0.00125% |
+| 19 | -+ | 157.54177149 | 157.51317313 | 0.01816% |
+| 20 | -- | 158.00263396 | 157.99862342 | 0.00254% |
 
-All 20 eigenvalues agree within approximately 0.025%.
+All 20 eigenvalues agree within approximately 0.024%.
 
-The largest relative difference occurs at state 16:
+The largest relative difference occurs at state 14:
 
 $$
-\delta_{16}\approx0.0241\%.
+\delta_{14}\approx0.02396\%.
 $$
 
-The agreement provides strong numerical evidence that the symmetry-reduced formulation reproduces the same physical eigenvalue problem as the direct full-domain calculation.
+The agreement provides numerical evidence that the symmetry-reduced formulation reproduces the same physical eigenvalue problem as the direct full-domain calculation.
 
 Small discrepancies are expected because the two methods use independently generated finite-element meshes.
 
-The comparison measures agreement between the two numerical formulations rather than error relative to the exact continuum spectrum.
+This comparison measures agreement between the two numerical formulations rather than error relative to the exact continuum spectrum.
 
 ---
 
@@ -397,11 +409,18 @@ For even parity, the wavefunction retains its sign under reflection.
 
 Because eigenvectors are defined up to an arbitrary overall sign, their signs must be aligned before comparing their spatial distributions.
 
-The comparison evaluates differences between the numerical eigenfunctions after appropriate interpolation and normalization.
+The comparison evaluates differences between the numerical eigenfunctions after interpolation and normalization.
+
+At $h=0.02$, the interpolation-based relative RMS differences for states 1, 2, 4, and 5 were approximately:
+
+| State | Parity | Relative RMS difference |
+| --- | --- | ---: |
+| 1 | ++ | 0.052% |
+| 2 | -+ | 0.103% |
+| 4 | +- | 0.156% |
+| 5 | -- | 0.381% |
 
 This provides an additional validation of the spatial solutions beyond agreement between energy eigenvalues.
-
-![Stadium Eigenfunction Comparison](results/figures/stadium_eigenfunction_comparison.png)
 
 ---
 
@@ -477,46 +496,47 @@ Mesh and level-count studies are included to test the robustness of this result.
 
 ## Repository Structure
 
-```text
-Quantum-Dots/
-│
-├── src/
-│   ├── FEM.py
-│   │
-│   ├── square_solver.py
-│   ├── circle_mesh.py
-│   ├── circle_solver.py
-│   ├── hexagon_mesh.py
-│   ├── hexagon_solver.py
-│   ├── stadium_mesh.py
-│   ├── stadium_solver.py
-│   │
-│   ├── convergence_study.py
-│   ├── compare_geometries.py
-│   ├── plot_eigenfunctions.py
-│   ├── mesh_gallery.py
-│   │
-│   ├── box_basis.py
-│   ├── circle_analytical.py
-│   ├── hexagon_basis.py
-│   ├── stadium_basis.py
-│   ├── basis_convergence.py
-│   ├── compare_methods.py
-│   │
-│   ├── stadium_sector_solver.py
-│   ├── stadium_full_analysis.py
-│   ├── stadium_eigenfunction_comparison.py
-│   ├── stadium_chaos.py
-│   └── chaos_convergence.py
-│
-├── results/
-│   ├── data/
-│   └── figures/
-│
-├── README.md
-├── LICENSE
-└── requirements.txt
-```
+    Quantum-Dots/
+    │
+    ├── Archive/
+    ├── docs/
+    │
+    ├── results/
+    │   ├── data/
+    │   └── figures/
+    │
+    ├── src/
+    │   ├── FEM.py
+    │   ├── square_solver.py
+    │   ├── circle_mesh.py
+    │   ├── circle_solver.py
+    │   ├── hexagon_mesh.py
+    │   ├── hexagon_solver.py
+    │   ├── stadium_mesh.py
+    │   ├── stadium_solver.py
+    │
+    │   ├── convergence_study.py
+    │   ├── compare_geometries.py
+    │   ├── plot_eigenfunctions.py
+    │   ├── mesh_gallery.py
+    │
+    │   ├── box_basis.py
+    │   ├── circle_analytical.py
+    │   ├── hexagon_basis.py
+    │   ├── stadium_basis.py
+    │   ├── basis_convergence.py
+    │   ├── compare_methods.py
+    │
+    │   ├── stadium_sector_solver.py
+    │   ├── stadium_full_analysis.py
+    │   ├── stadium_eigenfunction_comparison.py
+    │   ├── stadium_chaos.py
+    │   └── chaos_convergence.py
+    │
+    ├── .gitignore
+    ├── README.md
+    ├── LICENSE
+    └── requirements.txt
 
 ---
 
@@ -524,75 +544,73 @@ Quantum-Dots/
 
 Install the required packages:
 
-```bash
-pip install -r requirements.txt
-```
+    pip install -r requirements.txt
 
 Run the main equal-area comparison:
 
-```bash
-python src/compare_geometries.py
-```
+    python src/compare_geometries.py
 
 Run the FEM convergence study:
 
-```bash
-python src/convergence_study.py
-```
+    python src/convergence_study.py
 
-Generate the mesh figures:
+Generate the coarse and fine mesh galleries:
 
-```bash
-python src/mesh_gallery.py
-```
+    python src/mesh_gallery.py
 
 Generate the eigenfunction figures:
 
-```bash
-python src/plot_eigenfunctions.py
-```
+    python src/plot_eigenfunctions.py
 
 Run the full-stadium FEM solver:
 
-```bash
-python src/stadium_solver.py
-```
+    python src/stadium_solver.py
+
+Run the full-stadium analysis:
+
+    python src/stadium_full_analysis.py
 
 Run the four stadium symmetry sectors:
 
-```bash
-python src/stadium_sector_solver.py
-```
+    python src/stadium_sector_solver.py
 
 Generate the full-stadium eigenfunction comparison:
 
-```bash
-python src/stadium_eigenfunction_comparison.py --h 0.02
-```
+    python src/stadium_eigenfunction_comparison.py --h 0.02
 
 Run the independent FEM/basis comparison:
 
-```bash
-python src/compare_methods.py
-```
+    python src/compare_methods.py
 
 Run the basis convergence study:
 
-```bash
-python src/basis_convergence.py
-```
+    python src/basis_convergence.py
 
 Run the stadium quantum-chaos analysis:
 
-```bash
-python src/stadium_chaos.py
-```
+    python src/stadium_chaos.py
 
 Test the convergence of the chaos statistic:
 
-```bash
-python src/chaos_convergence.py
-```
+    python src/chaos_convergence.py
+
+---
+
+## Reproducibility Notes
+
+The primary equal-area calculations use $h=0.02$ for the circle, hexagon, and stadium, with $N=50$ for the square.
+
+The standardized full-stadium and quarter-stadium calculations use
+
+$$
+h=0.02,\qquad n_{\mathrm{arc}}=80.
+$$
+
+The coarse $h=0.08$ meshes are intended for visualization and are not used to produce the final energy values.
+
+The stadium quantum-chaos convergence study intentionally uses finer meshes, including $h=0.01$.
+
+The numerical comparison between full-domain and symmetry-reduced calculations uses identical nominal resolution and arc discretization, but the meshes are generated independently.
 
 ---
 
@@ -604,9 +622,9 @@ The square and circle reproduce known analytical spectra with small numerical er
 
 The full-stadium calculation independently solves the quantum billiard without quarter-domain symmetry reduction or mirroring.
 
-Comparison with the four symmetry-reduced calculations shows agreement within approximately 0.025% for the first 20 eigenvalues at $h=0.02$.
+Comparison with the four symmetry-reduced calculations shows agreement within approximately 0.024% for the first 20 eigenvalues at $h=0.02$.
 
-This validates the consistency of the two FEM formulations and demonstrates how reflection symmetry can be used to reduce computational cost without changing the underlying continuum eigenvalue problem.
+This supports the consistency of the two FEM formulations and demonstrates how reflection symmetry can reduce computational cost without changing the underlying continuum eigenvalue problem.
 
 The same FEM framework is extended to stadium quantum-chaos studies, where symmetry-resolved spectral statistics produce an adjacent-gap ratio consistent with GOE-like level repulsion and the expected signatures of quantum chaos.
 

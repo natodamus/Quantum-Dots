@@ -24,7 +24,7 @@ def main(h=0.02, num_eigenvalues=20, num_plots=6):
     DATA.mkdir(parents=True, exist_ok=True)
     radius = 1.0 / np.sqrt(4.0 + np.pi)
     nodes, triangles, boundary, interior, energies, eigenvectors = solve_stadium(
-        h=h, a=radius, R=radius, n_arc=100,
+        h=h, a=radius, R=radius, n_arc=80,
         num_eigenvalues=num_eigenvalues
     )
     print(f'Full stadium: {len(nodes)} nodes, {len(triangles)} triangles')
